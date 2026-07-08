@@ -1,26 +1,28 @@
-import sys
 import zipfile
 import xml.etree.ElementTree as ET
+import sys
 
-def extract_text(docx_file):
+def read_docx(file_path):
     try:
-        with zipfile.ZipFile(docx_file) as zf:
-            xml_content = zf.read('word/document.xml')
-            tree = ET.XML(xml_content)
-            namespace = {'w': 'http://schemas.openxmlformats.org/wordprocessingml/2006/main'}
-            text = []
-            for paragraph in tree.findall('.//w:p', namespace):
-                texts = [node.text for node in paragraph.findall('.//w:t', namespace) if node.text]
-                if texts:
-                    text.append(''.join(texts))
-            return '\n'.join(text)
+        doc = zipfile.ZipFile(file_path)
+        xml_content = doc.read('word/document.xml')
+        doc.close()
+        tree = ET.XML(xml_content)
+        
+        # The namespace for WordprocessingML
+        WORD_NAMESPACE = '{http://schemas.openxmlformats.org/wordprocessingml/2006/main}'
+        PARA = WORD_NAMESPACE + 'p'
+        TEXT = WORD_NAMESPACE + 't'
+        
+        paragraphs = []
+        for paragraph in tree.iter(PARA):
+            texts = [node.text for node in paragraph.iter(TEXT) if node.text]
+            if texts:
+                paragraphs.append(''.join(texts))
+        
+        return '\n'.join(paragraphs)
     except Exception as e:
         return str(e)
 
 if __name__ == '__main__':
-    if len(sys.argv) > 2:
-        output_file = sys.argv[2]
-        with open(output_file, 'w', encoding='utf-8') as f:
-            f.write(extract_text(sys.argv[1]))
-    else:
-        print(extract_text(sys.argv[1]))
+    print(read_docx(sys.argv[1]))
